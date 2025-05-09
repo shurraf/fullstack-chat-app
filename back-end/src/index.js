@@ -11,31 +11,37 @@ import { fileURLToPath } from 'url';
 
 dotenv.config();
 
-const port = process.env.PORT;
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const port = process.env.PORT || 5001;
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
+// Middlewares
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
 app.use(cookieParser());
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin: "http://localhost:5173", // Or your frontend domain if deploying separately
     credentials: true,
   })
 );
 
+// API Routes
 app.use('/api/auth', router);
 app.use('/api/messages', messageRouter);
 
+// Serve frontend in production
 if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(__dirname, '../front-end/dist')));
+  const frontendPath = path.join(__dirname, '../front-end/dist');
+  app.use(express.static(frontendPath));
 
   app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, '../front-end', 'dist', 'index.html'));
+    res.sendFile(path.join(frontendPath, 'index.html'));
   });
 }
 
+// Start server
 server.listen(port, () => {
-  console.log(`server is running on port ${port}`);
+  console.log(`✅ Server is running on port ${port}`);
   connectDb();
 });
