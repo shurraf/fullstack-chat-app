@@ -11,31 +11,61 @@ const Sidebar = ({ onUserSelect, onBackClick, showBackButton }) => {
     users = [],
     selectedUser,
     setSelectedUser,
-    isUsersLoading
+    isUsersLoading,
   } = useChatStore();
   const { onlineUsers = [], authUser } = useAuthStore();
   const [showOnlineOnly, setShowOnlineOnly] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [newMessageUsers, setNewMessageUsers] = useState([]);
+  const [notificationCounts, setNotificationCounts] = useState({});
   const { socket } = useSocketContext();
+
+  // Load notificationCounts from localStorage on mount
+  useEffect(() => {
+    const storedCounts = localStorage.getItem("notificationCounts");
+    if (storedCounts) {
+      setNotificationCounts(JSON.parse(storedCounts));
+    }
+  }, []);
+
+  // Save notificationCounts to localStorage on change
+  useEffect(() => {
+    localStorage.setItem(
+      "notificationCounts",
+      JSON.stringify(notificationCounts)
+    );
+  }, [notificationCounts]);
 
   useEffect(() => {
     socket?.on("newMessage", (newMessage) => {
-      // Add only if not already added from this sender
-      setNewMessageUsers((prev) => {
-        const alreadyExists = prev.some(
-          (msg) =>
-            msg.senderId === newMessage.senderId &&
-            msg.receiverId === newMessage.receiverId
+      if (selectedUser?._id !== newMessage.senderId) {
+        setNotificationCounts((prev) => {
+          const currentCount = prev[newMessage.senderId] || 0;
+          const updated = {
+            ...prev,
+            [newMessage.senderId]: currentCount + 1,
+          };
+          localStorage.setItem("notificationCounts", JSON.stringify(updated));
+          return updated;
+        });
+      }
+
+      useChatStore.setState((state) => {
+        const updatedUsers = state.users.filter(
+          (u) => u._id !== newMessage.senderId
         );
-        return alreadyExists ? prev : [...prev, newMessage];
+        const senderUser = state.users.find(
+          (u) => u._id === newMessage.senderId
+        );
+        return {
+          users: senderUser ? [senderUser, ...updatedUsers] : state.users,
+        };
       });
     });
 
     return () => {
       socket?.off("newMessage");
     };
-  }, [socket]);
+  }, [socket, selectedUser]);
 
   useEffect(() => {
     getUsers().catch((error) => {
@@ -57,10 +87,13 @@ const Sidebar = ({ onUserSelect, onBackClick, showBackButton }) => {
     if (user?._id) {
       setSelectedUser(user);
       if (onUserSelect) onUserSelect();
-      // Clear only messages from this user
-      setNewMessageUsers((prev) =>
-        prev.filter((msg) => msg.senderId !== user._id)
-      );
+
+      setNotificationCounts((prev) => {
+        const newCounts = { ...prev };
+        delete newCounts[user._id];
+        localStorage.setItem("notificationCounts", JSON.stringify(newCounts));
+        return newCounts;
+      });
     }
   };
 
@@ -131,11 +164,7 @@ const Sidebar = ({ onUserSelect, onBackClick, showBackButton }) => {
       <div className="overflow-y-auto w-full py-3 flex-1">
         {filteredUsers.length > 0 ? (
           filteredUsers.map((user) => {
-            const hasNewMessage = newMessageUsers.some(
-              (msg) =>
-                msg.receiverId === authUser?._id &&
-                msg.senderId === user._id
-            );
+            const unreadCount = notificationCounts[user._id] || 0;
 
             return (
               <button
@@ -163,9 +192,9 @@ const Sidebar = ({ onUserSelect, onBackClick, showBackButton }) => {
                 </div>
 
                 <div className="ml-auto">
-                  {hasNewMessage && (
-                    <div className="rounded-full bg-green-700 text-sm text-white px-[8px]">
-                      new
+                  {unreadCount > 0 && (
+                    <div className="rounded-full bg-green-600 text-white text-xs px-2 py-[1px]">
+                      +{unreadCount}
                     </div>
                   )}
                 </div>
