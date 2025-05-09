@@ -32,7 +32,7 @@ app.use('/api/messages', messageRouter);
 
 // Serve frontend in production
 if (process.env.NODE_ENV === 'production') {
-  const frontendPath = path.join(__dirname, '../front-end/dist');
+  const frontendPath = path.join(__dirname, '/front-end/dist');
   app.use(express.static(frontendPath));
 
   app.get('*', (req, res) => {
