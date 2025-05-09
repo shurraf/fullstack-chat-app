@@ -68,40 +68,48 @@ const MessageInput = () => {
         </div>
       )}
 
-      <form onSubmit={handleSendMessages} className="flex items-center gap-2">
-        <div className="flex-1 flex gap-2">
-          <input
-            type="text"
-            className="w-full input input-bordered rounded-lg input-sm sm:input-md"
-            placeholder="Type a message..."
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-          />
-          <input
-            type="file"
-            accept="image/*"
-            className="hidden"
-            ref={fileInputRef}
-            onChange={handleImageChange}
-          />
+      <form onSubmit={handleSendMessages} className="flex items-end gap-2 w-full">
+  {/* Text input - takes remaining space */}
+  <div className="flex-1">
+    <input
+      type="text"
+      className="w-full input input-bordered rounded-lg"
+      placeholder="Type a message..."
+      value={text}
+      onChange={(e) => setText(e.target.value)}
+    />
+  </div>
 
-          <button
-            type="button"
-            className={`btn btn-ghost btn-circle
-                     ${imagePreview ? "text-emerald-600" : "text-zinc-400"}`}
-            onClick={() => fileInputRef.current?.click()}
-          >
-            <Image size={20} />
-          </button>
-        </div>
-        <button
-          type="submit"
-          className="btn btn-sm btn-circle"
-          disabled={!text.trim() && !imagePreview}
-        >
-          <Send size={22} />
-        </button>
-      </form>
+  {/* Action buttons container - aligns with input */}
+  <div className="flex gap-2 items-center h-full">
+    {/* Image upload button */}
+    <button
+      type="button"
+      className="btn btn-ghost btn-square p-2"
+      onClick={() => fileInputRef.current?.click()}
+    >
+      <Image size={24} className={imagePreview ? "text-emerald-600" : "text-zinc-400"} />
+    </button>
+    
+    {/* Hidden file input */}
+    <input
+      type="file"
+      accept="image/*"
+      className="hidden"
+      ref={fileInputRef}
+      onChange={handleImageChange}
+    />
+
+    {/* Send button */}
+    <button
+      type="submit"
+      className="btn btn-primary btn-square p-2"
+      disabled={!text.trim() && !imagePreview}
+    >
+      <Send size={24} />
+    </button>
+  </div>
+</form>
     </div>
   );
 }
