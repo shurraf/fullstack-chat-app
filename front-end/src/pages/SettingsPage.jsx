@@ -1,18 +1,24 @@
-import React from 'react'
-import { useThemeStore } from '../store/useThemeStore'
-import { THEMES } from '../constants'
-import { Send } from 'lucide-react'
+import React from "react";
+import { useThemeStore } from "../store/useThemeStore";
+import { THEMES } from "../constants";
+import { Send } from "lucide-react";
 
 const PREVIEW_MESSAGES = [
   { id: 1, content: "Hey! How's it going?", isSent: false },
-  { id: 2, content: "I'm doing great! Just working on some new features.", isSent: true },
-]
+  {
+    id: 2,
+    content: "I'm doing great! Just working on some new features.",
+    isSent: true,
+  },
+];
 
 const SettingsPage = () => {
-  const {theme,setTheme} = useThemeStore()
+  const { theme, setTheme } = useThemeStore();
+
   return (
-    <div className="h-screen container mx-auto px-4 pt-20 max-w-5xl">
-      <div className="space-y-6">
+    <div className="min-h-screen container mx-auto px-2 sm:px-4 pt-20 max-w-5xl">
+      <div className="space-y-4">
+        {/* Theme Section */}
         <div className="flex flex-col gap-1">
           <h2 className="text-lg font-semibold">Theme</h2>
           <p className="text-sm text-base-content/70">
@@ -20,13 +26,15 @@ const SettingsPage = () => {
           </p>
         </div>
 
-        <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2">
+        {/* Theme Buttons */}
+        <div className="flex gap-2 overflow-x-auto pb-2">
           {THEMES.map((t) => (
             <button
               key={t}
               className={`
                 group flex flex-col items-center gap-1.5 p-2 rounded-lg transition-colors
                 ${theme === t ? "bg-base-200" : "hover:bg-base-200/50"}
+                min-w-[72px] flex-shrink-0
               `}
               onClick={() => setTheme(t)}
             >
@@ -50,9 +58,9 @@ const SettingsPage = () => {
 
         {/* Preview Section */}
         <h3 className="text-lg font-semibold mb-3">Preview</h3>
-        <div className="rounded-xl border border-base-300 overflow-hidden bg-base-100 shadow-lg">
+        <div className="rounded-xl border border-base-300 overflow-hidden bg-base-100 shadow-lg w-full">
           <div className="p-4 bg-base-200">
-            <div className="max-w-lg mx-auto">
+            <div className="w-full">
               {/* Mock Chat UI */}
               <div className="bg-base-100 rounded-xl shadow-sm overflow-hidden">
                 {/* Chat Header */}
@@ -69,7 +77,7 @@ const SettingsPage = () => {
                 </div>
 
                 {/* Chat Messages */}
-                <div className="p-4 space-y-4 min-h-[200px] max-h-[200px] overflow-y-auto bg-base-100">
+                <div className="p-4 space-y-4 min-h-[150px] max-h-[250px] overflow-y-auto bg-base-100">
                   {PREVIEW_MESSAGES.map((message) => (
                     <div
                       key={message.id}
@@ -89,14 +97,11 @@ const SettingsPage = () => {
                       >
                         <p className="text-sm">{message.content}</p>
                         <p
-                          className={`
-                            text-[10px] mt-1.5
-                            ${
-                              message.isSent
-                                ? "text-primary-content/70"
-                                : "text-base-content/70"
-                            }
-                          `}
+                          className={`text-[10px] mt-1.5 ${
+                            message.isSent
+                              ? "text-primary-content/70"
+                              : "text-base-content/70"
+                          }`}
                         >
                           12:00 PM
                         </p>
@@ -127,6 +132,6 @@ const SettingsPage = () => {
       </div>
     </div>
   );
-}
+};
 
-export default SettingsPage
+export default SettingsPage;
