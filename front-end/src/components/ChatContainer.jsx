@@ -139,6 +139,24 @@ const ChatContainer = ({ onBackClick }) => {
     }
   };
 
+  const downloadImage = async (url) => {
+    try {
+      const res = await fetch(url, { mode: "cors" });
+      const blob = await res.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = url.split("/").pop() || "image.jpg"; // fallback name
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(blobUrl);
+    } catch (error) {
+      console.error("Download failed:", error);
+    }
+  };
+  
+
   return (
     <div className="flex-1 flex flex-col overflow-auto">
       {onBackClick && (
@@ -244,14 +262,16 @@ const ChatContainer = ({ onBackClick }) => {
             </button>
 
             {/* ⬇️ Download Button */}
-            <a
-              href={selectedImage}
-              download
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                downloadImage(selectedImage);
+              }}
               className="absolute bottom-2 right-2 bg-white rounded-full p-2 shadow hover:bg-gray-200"
-              onClick={(e) => e.stopPropagation()}
+              aria-label="Download Image"
             >
               <Download className="size-5 text-black" />
-            </a>
+            </button>
 
             {/* 🖼️ Full Image */}
             <img
