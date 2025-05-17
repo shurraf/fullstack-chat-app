@@ -5,7 +5,7 @@ import MessageInput from "./MessageInput";
 import MessageSkeleton from "./skeletons/MessageSkeleton";
 import { useAuthStore } from "../store/useAuthStore";
 import { formatMessageTime } from "../lib/utils";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, Download, X } from "lucide-react";
 import { useSocketContext } from "../Context/SocketContext";
 import notify from '../assets/sound/notification.mp3';
 
@@ -22,9 +22,15 @@ const ChatContainer = ({ onBackClick }) => {
   const { socket } = useSocketContext();
   const { authUser } = useAuthStore();
   const messageEndRef = useRef(null);
+  const touchStartX = useRef(null);
+  const touchEndX = useRef(null);
 
   // 🆕 Image modal state
   const [selectedImage, setSelectedImage] = useState(null);
+  const [transitionKey, setTransitionKey] = useState(0);
+  const modalRef = useRef(null);
+
+
 
   useEffect(() => {
     const handleNewMessage = (newMessage) => {
@@ -64,6 +70,12 @@ const ChatContainer = ({ onBackClick }) => {
     }
   }, [messages]);
 
+  useEffect(() => {
+    if (selectedImage && modalRef.current) {
+      modalRef.current.focus();
+    }
+  }, [selectedImage]);  
+
   if (isMessagesLoading)
     return (
       <div className="flex-1 flex flex-col overflow-auto">
@@ -81,6 +93,51 @@ const ChatContainer = ({ onBackClick }) => {
         <MessageInput />
       </div>
     );
+
+  // Get list of image URLs
+  const imageUrls = messages.filter((msg) => msg.image).map((msg) => msg.image);
+
+  // Helper: show next image
+  const showNextImage = () => {
+    const index = imageUrls.indexOf(selectedImage);
+    if (index !== -1 && index < imageUrls.length - 1) {
+      setTransitionKey((prev) => prev + 1);
+      setSelectedImage(imageUrls[index + 1]);
+    }
+  };
+
+  // Helper: show previous image
+  const showPrevImage = () => {
+    const index = imageUrls.indexOf(selectedImage);
+    if (index > 0) {
+      setTransitionKey((prev) => prev + 1);
+      setSelectedImage(imageUrls[index - 1]);
+    }
+  };
+
+
+  // Detect swipe direction
+  const handleTouchStart = (e) => {
+    touchStartX.current = e.changedTouches[0].clientX;
+  };
+
+  const handleTouchEnd = (e) => {
+    touchEndX.current = e.changedTouches[0].clientX;
+    handleSwipeGesture();
+  };
+
+  const handleSwipeGesture = () => {
+    const deltaX = touchStartX.current - touchEndX.current;
+    if (Math.abs(deltaX) < 50) return; // not enough swipe
+
+    if (deltaX > 0) {
+      // Swipe Left
+      showNextImage();
+    } else {
+      // Swipe Right
+      showPrevImage();
+    }
+  };
 
   return (
     <div className="flex-1 flex flex-col overflow-auto">
@@ -143,14 +200,71 @@ const ChatContainer = ({ onBackClick }) => {
       {/* 🆕 Image Preview Modal */}
       {selectedImage && (
         <div
+          ref={modalRef}
           className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50"
           onClick={() => setSelectedImage(null)}
+          onKeyDown={(e) => {
+            if (e.key === "Escape") setSelectedImage(null);
+            if (e.key === "ArrowRight") showNextImage();
+            if (e.key === "ArrowLeft") showPrevImage();
+          }}
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+          tabIndex={0}
         >
-          <img
-            src={selectedImage}
-            alt="Full View"
-            className="max-w-[90vw] max-h-[90vh] rounded-lg"
-          />
+          <div className="relative">
+            {/* ❌ Close Button */}
+            <button
+              onClick={() => setSelectedImage(null)}
+              className="absolute top-2 right-2 bg-white rounded-full p-1 shadow text-black hover:bg-gray-200"
+            >
+              <X className="size-5" />
+            </button>
+
+            {/* ⬅️ Prev Button */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                showPrevImage();
+              }}
+              className="absolute left-2 top-1/2 -translate-y-1/2 text-white text-3xl px-3 hover:text-gray-300"
+            >
+              ←
+            </button>
+
+            {/* ➡️ Next Button */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                showNextImage();
+              }}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-white text-3xl px-3 hover:text-gray-300"
+            >
+              →
+            </button>
+
+            {/* ⬇️ Download Button */}
+            <a
+              href={selectedImage}
+              download
+              className="absolute bottom-2 right-2 bg-white rounded-full p-2 shadow hover:bg-gray-200"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <Download className="size-5 text-black" />
+            </a>
+
+            {/* 🖼️ Full Image */}
+            <img
+              key={transitionKey}
+              src={selectedImage}
+              alt="Full View"
+              className="max-w-[90vw] max-h-[90vh] rounded-lg transition-all duration-300 ease-in-out"
+              onClick={(e) => e.stopPropagation()}
+            />
+            <div className="absolute top-2 left-2 bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded">
+              {imageUrls.indexOf(selectedImage) + 1} / {imageUrls.length}
+            </div>
+          </div>
         </div>
       )}
     </div>
