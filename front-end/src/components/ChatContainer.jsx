@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useChatStore } from "../store/useChatStore";
 import ChatHeader from "./ChatHeader";
 import MessageInput from "./MessageInput";
@@ -7,7 +7,7 @@ import { useAuthStore } from "../store/useAuthStore";
 import { formatMessageTime } from "../lib/utils";
 import { ChevronLeft } from "lucide-react";
 import { useSocketContext } from "../Context/SocketContext";
-import notify from '../assets/sound/notification.mp3'
+import notify from '../assets/sound/notification.mp3';
 
 const ChatContainer = ({ onBackClick }) => {
   const {
@@ -19,10 +19,12 @@ const ChatContainer = ({ onBackClick }) => {
     unSubscribeFromMessages,
   } = useChatStore();
 
-  const {socket} = useSocketContext()
+  const { socket } = useSocketContext();
   const { authUser } = useAuthStore();
   const messageEndRef = useRef(null);
 
+  // 🆕 Image modal state
+  const [selectedImage, setSelectedImage] = useState(null);
 
   useEffect(() => {
     const handleNewMessage = (newMessage) => {
@@ -43,9 +45,7 @@ const ChatContainer = ({ onBackClick }) => {
     return () => {
       socket?.off("newMessage");
     };
-  }, [socket,messages]);
-
-
+  }, [socket, messages]);
 
   useEffect(() => {
     getMessages(selectedUser._id);
@@ -128,7 +128,8 @@ const ChatContainer = ({ onBackClick }) => {
                 <img
                   src={message.image}
                   alt="Attachment"
-                  className="sm:max-w-[200px] rounded-md mb-2"
+                  className="sm:max-w-[200px] rounded-md mb-2 cursor-pointer"
+                  onClick={() => setSelectedImage(message.image)}
                 />
               )}
               {message.text && <p>{message.text}</p>}
@@ -138,6 +139,20 @@ const ChatContainer = ({ onBackClick }) => {
       </div>
 
       <MessageInput />
+
+      {/* 🆕 Image Preview Modal */}
+      {selectedImage && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50"
+          onClick={() => setSelectedImage(null)}
+        >
+          <img
+            src={selectedImage}
+            alt="Full View"
+            className="max-w-[90vw] max-h-[90vh] rounded-lg"
+          />
+        </div>
+      )}
     </div>
   );
 };
