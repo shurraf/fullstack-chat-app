@@ -4,10 +4,10 @@ import ChatHeader from "./ChatHeader";
 import MessageInput from "./MessageInput";
 import MessageSkeleton from "./skeletons/MessageSkeleton";
 import { useAuthStore } from "../store/useAuthStore";
-import { formatMessageTime } from "../lib/utils";
+import { formatMessageTime, formatMessageDateLabel } from "../lib/utils";
 import { ChevronLeft, Download, X } from "lucide-react";
 import { useSocketContext } from "../Context/SocketContext";
-import notify from '../assets/sound/notification.mp3';
+import notify from "../assets/sound/notification.mp3";
 
 const ChatContainer = ({ onBackClick }) => {
   const {
@@ -24,18 +24,13 @@ const ChatContainer = ({ onBackClick }) => {
   const messageEndRef = useRef(null);
   const touchStartX = useRef(null);
   const touchEndX = useRef(null);
-
-  // 🆕 Image modal state
   const [selectedImage, setSelectedImage] = useState(null);
   const [transitionKey, setTransitionKey] = useState(0);
   const modalRef = useRef(null);
 
-
-
   useEffect(() => {
     const handleNewMessage = (newMessage) => {
       const { selectedUser } = useChatStore.getState();
-
       const sound = new Audio(notify);
       sound.play();
 
@@ -47,7 +42,6 @@ const ChatContainer = ({ onBackClick }) => {
     };
 
     socket?.on("newMessage", handleNewMessage);
-
     return () => {
       socket?.off("newMessage");
     };
@@ -74,7 +68,57 @@ const ChatContainer = ({ onBackClick }) => {
     if (selectedImage && modalRef.current) {
       modalRef.current.focus();
     }
-  }, [selectedImage]);  
+  }, [selectedImage]);
+
+  const imageUrls = messages.filter((msg) => msg.image).map((msg) => msg.image);
+
+  const showNextImage = () => {
+    const index = imageUrls.indexOf(selectedImage);
+    if (index !== -1 && index < imageUrls.length - 1) {
+      setTransitionKey((prev) => prev + 1);
+      setSelectedImage(imageUrls[index + 1]);
+    }
+  };
+
+  const showPrevImage = () => {
+    const index = imageUrls.indexOf(selectedImage);
+    if (index > 0) {
+      setTransitionKey((prev) => prev + 1);
+      setSelectedImage(imageUrls[index - 1]);
+    }
+  };
+
+  const handleTouchStart = (e) => {
+    touchStartX.current = e.changedTouches[0].clientX;
+  };
+
+  const handleTouchEnd = (e) => {
+    touchEndX.current = e.changedTouches[0].clientX;
+    handleSwipeGesture();
+  };
+
+  const handleSwipeGesture = () => {
+    const deltaX = touchStartX.current - touchEndX.current;
+    if (Math.abs(deltaX) < 50) return;
+    deltaX > 0 ? showNextImage() : showPrevImage();
+  };
+
+  const downloadImage = async (url) => {
+    try {
+      const res = await fetch(url, { mode: "cors" });
+      const blob = await res.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = url.split("/").pop() || "image.jpg";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(blobUrl);
+    } catch (error) {
+      console.error("Download failed:", error);
+    }
+  };
 
   if (isMessagesLoading)
     return (
@@ -94,69 +138,6 @@ const ChatContainer = ({ onBackClick }) => {
       </div>
     );
 
-  // Get list of image URLs
-  const imageUrls = messages.filter((msg) => msg.image).map((msg) => msg.image);
-
-  // Helper: show next image
-  const showNextImage = () => {
-    const index = imageUrls.indexOf(selectedImage);
-    if (index !== -1 && index < imageUrls.length - 1) {
-      setTransitionKey((prev) => prev + 1);
-      setSelectedImage(imageUrls[index + 1]);
-    }
-  };
-
-  // Helper: show previous image
-  const showPrevImage = () => {
-    const index = imageUrls.indexOf(selectedImage);
-    if (index > 0) {
-      setTransitionKey((prev) => prev + 1);
-      setSelectedImage(imageUrls[index - 1]);
-    }
-  };
-
-
-  // Detect swipe direction
-  const handleTouchStart = (e) => {
-    touchStartX.current = e.changedTouches[0].clientX;
-  };
-
-  const handleTouchEnd = (e) => {
-    touchEndX.current = e.changedTouches[0].clientX;
-    handleSwipeGesture();
-  };
-
-  const handleSwipeGesture = () => {
-    const deltaX = touchStartX.current - touchEndX.current;
-    if (Math.abs(deltaX) < 50) return; // not enough swipe
-
-    if (deltaX > 0) {
-      // Swipe Left
-      showNextImage();
-    } else {
-      // Swipe Right
-      showPrevImage();
-    }
-  };
-
-  const downloadImage = async (url) => {
-    try {
-      const res = await fetch(url, { mode: "cors" });
-      const blob = await res.blob();
-      const blobUrl = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = blobUrl;
-      link.download = url.split("/").pop() || "image.jpg"; // fallback name
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(blobUrl);
-    } catch (error) {
-      console.error("Download failed:", error);
-    }
-  };
-  
-
   return (
     <div className="flex-1 flex flex-col overflow-auto">
       {onBackClick && (
@@ -171,51 +152,67 @@ const ChatContainer = ({ onBackClick }) => {
       <ChatHeader />
 
       <div className="flex-1 overflow-auto p-4 space-y-4">
-        {messages.map((message) => (
-          <div
-            key={message._id}
-            className={`chat ${
-              message.senderId === authUser._id ? "chat-end" : "chat-start"
-            }`}
-            ref={messageEndRef}
-          >
-            <div className="chat-image avatar">
-              <div className="size-10 rounded-full border">
-                <img
-                  src={
-                    message.senderId === authUser._id
-                      ? authUser.profilePic || "/avatar.png"
-                      : selectedUser.profilePic || "/avatar.png"
-                  }
-                  alt="profile pic"
-                />
+        {messages.map((message, index) => {
+          const currentDateLabel = formatMessageDateLabel(message.createdAt);
+          const previousDateLabel =
+            index > 0
+              ? formatMessageDateLabel(messages[index - 1].createdAt)
+              : null;
+          const shouldShowDateLabel =
+            index === 0 || currentDateLabel !== previousDateLabel;
+
+          return (
+            <div key={message._id}>
+              {shouldShowDateLabel && (
+                <div className="text-center text-xs text-gray-600 my-2 font-medium">
+                  {currentDateLabel}
+                </div>
+              )}
+
+              <div
+                className={`chat ${
+                  message.senderId === authUser._id ? "chat-end" : "chat-start"
+                }`}
+                ref={index === messages.length - 1 ? messageEndRef : null}
+              >
+                <div className="chat-image avatar">
+                  <div className="size-10 rounded-full border">
+                    <img
+                      src={
+                        message.senderId === authUser._id
+                          ? authUser.profilePic || "/avatar.png"
+                          : selectedUser.profilePic || "/avatar.png"
+                      }
+                      alt="profile pic"
+                    />
+                  </div>
+                </div>
+
+                <div className="chat-header mb-1">
+                  <time className="text-xs opacity-50 ml-1">
+                    {formatMessageTime(message.createdAt)}
+                  </time>
+                </div>
+
+                <div className="chat-bubble flex flex-col">
+                  {message.image && (
+                    <img
+                      src={message.image}
+                      alt="Attachment"
+                      className="sm:max-w-[200px] rounded-md mb-2 cursor-pointer"
+                      onClick={() => setSelectedImage(message.image)}
+                    />
+                  )}
+                  {message.text && <p>{message.text}</p>}
+                </div>
               </div>
             </div>
-
-            <div className="chat-header mb-1">
-              <time className="text-xs opacity-50 ml-1">
-                {formatMessageTime(message.createdAt)}
-              </time>
-            </div>
-
-            <div className="chat-bubble flex flex-col">
-              {message.image && (
-                <img
-                  src={message.image}
-                  alt="Attachment"
-                  className="sm:max-w-[200px] rounded-md mb-2 cursor-pointer"
-                  onClick={() => setSelectedImage(message.image)}
-                />
-              )}
-              {message.text && <p>{message.text}</p>}
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       <MessageInput />
 
-      {/* 🆕 Image Preview Modal */}
       {selectedImage && (
         <div
           ref={modalRef}
@@ -231,7 +228,6 @@ const ChatContainer = ({ onBackClick }) => {
           tabIndex={0}
         >
           <div className="relative">
-            {/* ❌ Close Button */}
             <button
               onClick={() => setSelectedImage(null)}
               className="absolute top-2 right-2 bg-white rounded-full p-1 shadow text-black hover:bg-gray-200"
@@ -239,7 +235,6 @@ const ChatContainer = ({ onBackClick }) => {
               <X className="size-5" />
             </button>
 
-            {/* ⬅️ Prev Button */}
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -250,7 +245,6 @@ const ChatContainer = ({ onBackClick }) => {
               ←
             </button>
 
-            {/* ➡️ Next Button */}
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -261,7 +255,6 @@ const ChatContainer = ({ onBackClick }) => {
               →
             </button>
 
-            {/* ⬇️ Download Button */}
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -273,7 +266,6 @@ const ChatContainer = ({ onBackClick }) => {
               <Download className="size-5 text-black" />
             </button>
 
-            {/* 🖼️ Full Image */}
             <img
               key={transitionKey}
               src={selectedImage}
