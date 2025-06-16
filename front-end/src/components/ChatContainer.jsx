@@ -164,7 +164,7 @@ const ChatContainer = ({ onBackClick }) => {
           return (
             <div key={message._id}>
               {shouldShowDateLabel && (
-                <div className="text-center text-xs text-gray-600 my-2 font-medium">
+                <div className="text-center text-xs opacity-70 my-2 font-medium">
                   {currentDateLabel}
                 </div>
               )}
@@ -189,7 +189,7 @@ const ChatContainer = ({ onBackClick }) => {
                 </div>
 
                 <div className="chat-header mb-1">
-                  <time className="text-xs opacity-50 ml-1">
+                  <time className="text-xs opacity-60 ml-1">
                     {formatMessageTime(message.createdAt)}
                   </time>
                 </div>
