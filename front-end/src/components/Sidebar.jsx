@@ -74,7 +74,7 @@ const Sidebar = ({ onUserSelect, onBackClick, showBackButton }) => {
     <aside
       className={`h-full ${
         showBackButton ? "w-full" : "w-full lg:w-72"
-      } border-r border-base-300 flex flex-col transition-all duration-200`}
+      } border-r border-base-300 bg-secondary/10 flex flex-col transition-all duration-200`}
     >
       {showBackButton && (
         <button
