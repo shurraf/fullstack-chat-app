@@ -123,7 +123,7 @@ const Sidebar = ({ onUserSelect, onBackClick, showBackButton }) => {
             />
             <span className="text-sm">Show online only</span>
           </label>
-          <span className="text-sm text-zinc-400">({onlineCount} online)</span>
+          <span className="text-sm  text-zinc-400">({onlineCount} online)</span>
         </div>
       </div>
 
